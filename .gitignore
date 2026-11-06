@@ -10,6 +10,7 @@ dist/
 # Environments
 .venv/
 venv/
+env/
 .env
 
 # Firewall runtime state (pins, audit logs)
