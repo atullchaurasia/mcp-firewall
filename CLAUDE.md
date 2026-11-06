@@ -93,6 +93,10 @@ drop-in proxy that requires no change to the agent or the model?
 
 Unlabeled tools default to `untrusted=true, sink=true` (worst case) and log a warning.
 
+Annotation tightening (only explicit `true` hints count; `readOnlyHint`, `idempotentHint` and `false` values are ignored):
+`destructiveHint` → `irreversible`; `openWorldHint` → `untrusted`, plus `sink` unless `readOnlyHint` is also true.
+Annotations never add `trusted_fields`. Unknown label keys or non-boolean values in config are rejected.
+
 ### Taint tracking (from outside the model)
 
 The firewall cannot see inside the LLM. It tracks provenance at the tool boundary:
