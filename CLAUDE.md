@@ -135,6 +135,9 @@ Untrusted outputs are wrapped (configurable, on by default):
     `Server("mcp-firewall", on_list_tools=fn, on_call_tool=fn)`; each handler has signature `async def fn(ctx, params)`.
   - Types live in the `mcp_types` package: `import mcp_types as types` (`types.ListToolsResult`, `types.CallToolResult`, `types.TextContent`).
   - Client: `from mcp import Client, StdioServerParameters`. `Client(...)` accepts a URL (Streamable HTTP), `StdioServerParameters`, or a `Server`/`MCPServer` instance (in-process — use this in tests).
+  - `Client` is an async context manager: `async with Client(target) as c: await c.list_tools()`. A proxy `on_call_tool`
+    can return the upstream's `CallToolResult` as-is; rename tools with `tool.model_copy(update={"name": ...})`.
+    (Verified against `mcp` 2.3.0 in the Phase 0 spike.)
   - Result fields are snake_case: `result.is_error`, `result.content`, `result.structured_content`; tool fields `tool.input_schema`, `tool.annotations.open_world_hint`, etc.
   - Elicitation from a server handler: `await ctx.session.elicit_form(message, requested_schema)`; client side supplies `elicitation_callback=` to `Client`.
   - **Gotcha:** never run Python with the working directory inside the installed `mcp` package folder; its `types` subpackage shadows the stdlib and causes a circular import.
