@@ -105,6 +105,16 @@ The firewall cannot see inside the LLM. It tracks provenance at the tool boundar
 - **Private shingles**: 6-word sliding windows of private outputs + long numbers in them, used to detect private data leaving through a sink.
 - **Session flags**: `seen_untrusted`, `seen_private`, with lists of source tools.
 
+Extraction details (decided in step 4):
+- Bare domains (no scheme/`@`) count only for common gTLDs (`com net org edu gov io ai co …`) and 2-letter ccTLDs,
+  minus file-extension-like ones (`py md sh js ts …`), so `config.yaml` / `self.data` are not atoms. Domains in URLs and
+  emails always count.
+- Numbers: digit groups joined by single spaces/hyphens (`4111 2222 …`); both the joined form and each unbroken run
+  ≥ 8 digits are atoms. Exact dash dates (`2026-11-06`) are skipped.
+- A tool output that is a JSON string is parsed once at the top level so `trusted_fields` work; nested strings are
+  never parsed, so a body cannot fake a trusted key.
+- `PrivateLeak` reports counts and source tools only; ledger `repr` hides all atoms and fingerprints.
+
 ### Policy rules (most severe wins)
 
 | ID | Rule | Condition | Action |
@@ -367,6 +377,10 @@ until the previous step's tests pass. Commit after each step.
 - Cannot see inside the model; provenance is approximate compared with CaMeL's interpreter-level data flow.
 - Misses attacks that use only trusted destinations or no identifiers at all (e.g. sending private data to a real contact, sabotaging task output).
 - Obfuscated atoms fall through R1 to the weaker R2 (ASK).
+- Subdomain variants are not linked: a tainted `evil.co` does not flag `log.evil.co` (needs registrable-domain logic).
+- Trusted fields are trusted even when the sender is the attacker: replying to an injected email's `from` passes R1
+  (R2 still fires if private data was seen).
+- Private texts shorter than 6 words produce no shingles; only their long numbers are fingerprinted.
 - Scanner is pattern-based and evadable; LLM classifier is planned.
 - ASK decisions add friction; approval fatigue is a real risk — report ask rate alongside security metrics.
 - Current design keeps one ledger per stdio session; HTTP multi-session support is future work.
