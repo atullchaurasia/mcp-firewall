@@ -124,6 +124,10 @@ Extraction details (decided in step 4):
 | R2 | `lethal_trifecta` | Sink call, session has seen untrusted content AND (private data OR args contain private data) | ASK |
 | R3 | `untrusted_irreversible` | Irreversible call after untrusted content entered context | ASK |
 
+All hits are kept on the `Decision` (most severe first; ties keep rule order R0→R3). `evaluate(..., disabled={"R2"})`
+is the ablation switch. **Open question:** as specified, R3 fires on demo S1 (inbox summary emailed to a known contact
+→ ASK, not ALLOW); resolve before step 11 by changing either R3 or the S1 expectation.
+
 Modes: `enforce` (apply decisions) and `monitor` (log decisions, allow everything — used to measure false positives).
 
 When blocking, return a `CallToolResult` with `is_error=True` and a clear message to the agent:
