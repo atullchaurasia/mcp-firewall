@@ -404,6 +404,11 @@ until the previous step's tests pass. Commit after each step.
   Known false-positive risk: legitimate tools about `.env` files or SSH keys are quarantined (operator must review).
 - ASK decisions add friction; approval fatigue is a real risk — report ask rate alongside security metrics.
 - Current design keeps one ledger per stdio session; HTTP multi-session support is future work.
+- Spotlighting wraps text blocks only; `structured_content` is passed through unwrapped (it is JSON). Clients that
+  feed structured content to the model get no markers (taint tracking still covers it).
+- Rug pulls are detected at listing time (pins persist across sessions); a definition changed mid-session is only
+  caught on the next `tools/list`.
+- Upstream servers' own elicitation/sampling requests are not relayed to the agent's client.
 
 ## 13. References
 
