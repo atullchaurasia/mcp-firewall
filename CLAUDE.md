@@ -277,6 +277,12 @@ upstreams:
     args: [demo/servers/poisoned.py]
 ```
 
+Validation (step 7): unknown keys and wrong types are errors of the form `<file>: <key.path>: <message>`. Each upstream
+needs exactly one of `command` (stdio; optional `args`, `env`, `cwd`) or `url` (HTTP). Server names must not contain
+`__`. Relative paths (`pins_file`, `audit_log`, `cwd`) resolve against the config file's directory, and stdio upstreams
+run there by default. Risky settings (`approver: approve`, `mode: monitor`, loose `default_labels`) load but produce
+`config.warnings` for the CLI to print. Audit `args_preview` is structural only, e.g. `{to: str(12), body: str(51)}`.
+
 ---
 
 ## 8. Roadmap — step by step

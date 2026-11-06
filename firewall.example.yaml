@@ -1,0 +1,49 @@
+# MCP Firewall example config. Copy to firewall.yaml and adjust.
+# Relative paths below resolve against the directory of this file.
+
+# enforce: apply decisions.  monitor: log decisions but allow everything (false-positive measurement).
+mode: enforce
+
+# Wrap untrusted tool outputs in [UNTRUSTED CONTENT ...] markers.
+spotlight: true
+
+# Who answers ASK decisions:
+#   elicit  - ask the user through the MCP client (elicitation)
+#   tty     - ask on the terminal (/dev/tty), for clients without elicitation
+#   deny    - refuse every ASK
+#   approve - accept every ASK (benchmarks only!)
+approver: elicit
+
+# Optional trusted task text; atoms in it (emails, URLs, ...) count as trusted.
+# Usually passed per run with: mcpfw run --user-task "..."
+user_task: null
+
+pins_file: .mcpfw/pins.json     # approved tool-definition hashes (rug-pull detection)
+audit_log: .mcpfw/audit.jsonl   # append-only decision log
+
+# Labels for tools not listed under an upstream. Keep this worst-case.
+default_labels: {untrusted: true, sink: true}
+
+upstreams:
+  workspace:
+    command: python
+    args: [demo/servers/workspace.py]
+    tools:
+      # untrusted: output may contain attacker text; trusted_fields are server-verified JSON keys
+      read_inbox:   {untrusted: true, trusted_fields: [from, to, date]}
+      # private: output contains the user's sensitive data
+      read_file:    {private: true}
+      # {} = benign: trusted output, no side effects
+      get_contacts: {}
+      # sink: can move data out; irreversible: cannot be undone
+      send_email:   {sink: true, irreversible: true}
+      fetch_url:    {untrusted: true, sink: true}
+
+  # No tools listed: every tool gets default_labels, and its description is scanned and pinned.
+  weather:
+    command: python
+    args: [demo/servers/poisoned.py]
+
+  # HTTP upstreams use url instead of command:
+  # remote:
+  #   url: https://mcp.example.com/mcp
