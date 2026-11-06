@@ -104,6 +104,18 @@ class AuditLog:
         return self.write("tool", tool=tool, status=status, reason=reason, **fields)
 
 
+class NullAuditLog(AuditLog):
+    """Discards events (read-only commands such as ``mcpfw scan``)."""
+
+    def __init__(self) -> None:
+        self.path = None  # type: ignore[assignment]
+        self.session_id = "none"
+        self._clock = lambda: datetime.now(timezone.utc)
+
+    def write(self, event: str, **fields: Any) -> dict[str, Any]:
+        return {"ts": self._clock().isoformat(), "session": self.session_id, "event": event, **fields}
+
+
 class Stopwatch:
     """Tiny helper for ``latency_ms``."""
 

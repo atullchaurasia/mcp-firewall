@@ -30,8 +30,8 @@ from mcp.server.stdio import stdio_server
 
 from mcpfw import __version__
 from mcpfw.approver import ApprovalRequest, Approver, InputRequired, make_approver
-from mcpfw.audit import AuditLog, Stopwatch, args_sha256
-from mcpfw.config import NAMESPACE_SEP, FirewallConfig, UpstreamConfig
+from mcpfw.audit import AuditLog, NullAuditLog, Stopwatch, args_sha256
+from mcpfw.config import NAMESPACE_SEP, FirewallConfig, UpstreamConfig, UpstreamError
 from mcpfw.descriptions import PinStatus, PinStore, fingerprint, quarantine_reason, scan_tool
 from mcpfw.labels import ToolLabels
 from mcpfw.policy import Action, Decision, evaluate
@@ -50,11 +50,24 @@ class Route:
     labels: ToolLabels
 
 
+@dataclass(frozen=True)
+class ToolReport:
+    """Per-tool outcome of the last listing (used by ``mcpfw scan``)."""
+
+    key: str
+    status: str  # "ok" | "unlabeled" | "quarantined"
+    pin: str | None  # "new" | "match" | "changed" | None (not pinned: scanner hit)
+    labels: ToolLabels
+    reason: str | None = None
+    findings: tuple[str, ...] = ()
+
+
 class Firewall:
     """Async context manager owning the upstream connections and the session state.
 
     ``targets`` overrides how an upstream is reached (anything ``mcp.Client`` accepts, e.g. an
     in-process ``MCPServer``); used by tests and the benchmark. ``disabled_rules`` is for ablations.
+    ``read_only`` (``mcpfw scan``) never writes the pins file or the audit log.
     """
 
     def __init__(
@@ -66,10 +79,13 @@ class Firewall:
         audit: AuditLog | None = None,
         targets: Mapping[str, Any] | None = None,
         disabled_rules: Collection[str] = (),
+        read_only: bool = False,
     ) -> None:
         self.config = config
+        self.read_only = read_only
         self.approver = approver or make_approver(config.approver)
-        self.audit = audit or AuditLog(config.audit_log)
+        self.audit = audit or (NullAuditLog() if read_only else AuditLog(config.audit_log))
+        self.tool_report: dict[str, ToolReport] = {}
         self.ledger = TaintLedger()
         self.disabled_rules = frozenset(disabled_rules)
         self._targets = dict(targets or {})
@@ -92,7 +108,10 @@ class Firewall:
         try:
             for name, upstream in self.config.upstreams.items():
                 target = self._targets.get(name) or _client_target(upstream)
-                self._clients[name] = await self._stack.enter_async_context(Client(target))
+                try:
+                    self._clients[name] = await self._stack.enter_async_context(Client(target))
+                except Exception as exc:
+                    raise UpstreamError(name, upstream, exc) from exc
         except BaseException:
             await self._stack.aclose()
             raise
@@ -127,6 +146,7 @@ class Firewall:
 
         routes: dict[str, Route] = {}
         quarantine: dict[str, str] = {}
+        report: dict[str, ToolReport] = {}
         visible: list[types.Tool] = []
         pins_before = dict(self.pins.pins)
 
@@ -149,26 +169,27 @@ class Firewall:
                 findings = scan_tool(tool.name, tool.description, tool.input_schema, other_tool_names=others)
                 if findings:
                     reason = quarantine_reason(findings)
+                    details = tuple(str(f) for f in findings)
                     quarantine[key] = reason
-                    self._note_tool(key, "quarantined", reason, findings=[str(f) for f in findings])
+                    report[key] = ToolReport(key, "quarantined", None, labels, reason, details)
+                    self._note_tool(key, "quarantined", reason, findings=list(details))
                     continue
 
                 pin = self.pins.check(key, fingerprint(key, tool.description, tool.input_schema, annotations))
                 if pin.status is PinStatus.CHANGED:
                     quarantine[key] = pin.reason or "definition changed"
+                    report[key] = ToolReport(key, "quarantined", "changed", labels, quarantine[key])
                     self._note_tool(key, "quarantined", quarantine[key], pin="changed")
                     continue
 
-                self._note_tool(
-                    key,
-                    "ok" if labels.known else "unlabeled",
-                    None if labels.known else "not in config; using default_labels",
-                    pin=pin.status.value,
-                )
+                status = "ok" if labels.known else "unlabeled"
+                reason = None if labels.known else "not in config; using default_labels"
+                report[key] = ToolReport(key, status, pin.status.value, labels, reason)
+                self._note_tool(key, status, reason, pin=pin.status.value)
                 visible.append(tool.model_copy(update={"name": key}))
 
-        self._routes, self._quarantine = routes, quarantine
-        if self.pins.pins != pins_before:
+        self._routes, self._quarantine, self.tool_report = routes, quarantine, report
+        if self.pins.pins != pins_before and not self.read_only:
             self._save_pins()
         return visible
 

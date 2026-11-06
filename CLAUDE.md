@@ -229,11 +229,18 @@ pytest tests/test_policy.py -q -k trifecta
 mcpfw run --config firewall.yaml
 mcpfw run --config firewall.yaml --mode monitor --user-task "Summarize my inbox"
 
-# scan an upstream server's tools without running an agent
+# scan an upstream server's tools without running an agent (read-only; exit 1 if any tool is quarantined)
 mcpfw scan --config firewall.yaml
 
-# re-approve changed tool definitions after manual review
-mcpfw pins --reset <server>__<tool>
+# list pins / re-approve changed tool definitions after manual review
+mcpfw pins --config firewall.yaml --list
+mcpfw pins --config firewall.yaml --reset <server>__<tool> [...]   # or --reset-all
+
+# summarize the audit log (or --audit path/to/audit.jsonl, optionally --session <id>)
+mcpfw report --config firewall.yaml
+
+# also runnable as: python -m mcpfw ...   Exit codes: 0 ok, 1 findings / nothing reset, 2 config or upstream error.
+# Logs go to stderr (stdout is the MCP channel under `run`); --log-level debug|info|warning|error.
 
 # demo
 python demo/attack_demo.py

@@ -43,6 +43,22 @@ class ConfigError(ValueError):
     """A malformed config. The message names the file and the offending key."""
 
 
+class UpstreamError(RuntimeError):
+    """An upstream server could not be started or connected to."""
+
+    def __init__(self, name: str, upstream: UpstreamConfig, cause: BaseException) -> None:
+        how = upstream.url or " ".join([upstream.command or "", *upstream.args]).strip()
+        super().__init__(f"upstream '{name}' ({how}) failed to connect: {_root_message(cause)}")
+        self.name = name
+
+
+def _root_message(exc: BaseException) -> str:
+    """Innermost useful message, unwrapping exception groups from task groups."""
+    while getattr(exc, "exceptions", None):  # ExceptionGroup (3.11+) or the anyio backport on 3.10
+        exc = exc.exceptions[0]  # type: ignore[attr-defined]
+    return f"{type(exc).__name__}: {exc}"
+
+
 @dataclass(frozen=True)
 class UpstreamConfig:
     name: str
