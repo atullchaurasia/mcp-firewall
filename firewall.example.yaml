@@ -26,7 +26,7 @@ default_labels: {untrusted: true, sink: true}
 
 upstreams:
   workspace:
-    command: python
+    command: "{python}"   # the interpreter running mcpfw (e.g. the project venv)
     args: [demo/servers/workspace.py]
     tools:
       # untrusted: output may contain attacker text; trusted_fields are server-verified JSON keys
@@ -41,7 +41,7 @@ upstreams:
 
   # No tools listed: every tool gets default_labels, and its description is scanned and pinned.
   weather:
-    command: python
+    command: "{python}"   # the interpreter running mcpfw (e.g. the project venv)
     args: [demo/servers/poisoned.py]
 
   # HTTP upstreams use url instead of command:

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from collections.abc import Collection, Mapping
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
@@ -338,12 +339,21 @@ class Firewall:
 # --- helpers -------------------------------------------------------------------------------------
 
 
+PYTHON_TOKEN = "{python}"
+
+
+def resolve_command(command: str) -> str:
+    """``{python}`` means the interpreter running mcpfw, so Python upstreams get the same environment
+    (e.g. the project venv) even when the MCP client launches mcpfw with a different PATH."""
+    return sys.executable if command == PYTHON_TOKEN else command
+
+
 def _client_target(upstream: UpstreamConfig) -> Any:
     if upstream.url:
         return upstream.url
     env = {**os.environ, **upstream.env} if upstream.env is not None else None
     return StdioServerParameters(
-        command=upstream.command,
+        command=resolve_command(upstream.command or ""),
         args=list(upstream.args),
         env=env,
         cwd=str(upstream.cwd) if upstream.cwd else None,
