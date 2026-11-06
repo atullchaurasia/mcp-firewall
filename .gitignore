@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Firewall runtime state (pins, audit logs)
+.mcpfw/
+
+# Benchmark results: keep only summaries
+bench/results/*
+!bench/results/summaries/
+!bench/results/.gitkeep
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
