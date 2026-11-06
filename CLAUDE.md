@@ -75,7 +75,7 @@ drop-in proxy that requires no change to the agent or the model?
 | `taint.py` | `TaintLedger`: atom extraction, trusted vs tainted atoms, private-data shingles, trusted-field splitting for JSON |
 | `policy.py` | `Action` (ALLOW < ASK < BLOCK), `Decision`, `evaluate()` running all rules, most severe wins |
 | `descriptions.py` | `scan_tool()` heuristics for poisoned metadata, `PinStore` for hash pinning (in-memory + JSON text; the proxy owns the file; changed pins stay quarantined until reset) |
-| `approver.py` | Human approval backends: MCP elicitation, TTY, auto-deny, auto-approve (benchmark only) |
+| `approver.py` | Human approval backends: MCP elicitation (back-channel or input-required round trip with single-use tokens bound to tool + args hash), TTY (`/dev/tty`, Windows `CONIN$`/`CONOUT$`), auto-deny, auto-approve (benchmark only). `approve()` returns `Approval` or `InputRequired` (proxy returns its result as-is) |
 | `audit.py` | Append-only JSONL audit log |
 | `config.py` | Load and validate `firewall.yaml` |
 | `proxy.py` | The MCP server the agent talks to; connects to upstreams; wires everything together |
@@ -158,6 +158,13 @@ Untrusted outputs are wrapped (configurable, on by default):
     (Verified against `mcp` 2.3.0 in the Phase 0 spike.)
   - Result fields are snake_case: `result.is_error`, `result.content`, `result.structured_content`; tool fields `tool.input_schema`, `tool.annotations.open_world_hint`, etc.
   - Elicitation from a server handler: `await ctx.session.elicit_form(message, requested_schema)`; client side supplies `elicitation_callback=` to `Client`.
+  - **Two protocol eras (verified in step 8).** `mcp` 2.3 speaks the **2026-07-28** revision, where the server has
+    **no back-channel**: `elicit_form` raises `NoBackChannelError`. Instead `on_call_tool` returns
+    `types.InputRequiredResult(input_requests={key: types.ElicitRequest(...)}, request_state=...)`, and the client
+    answers via its callbacks and retries with `params.input_responses` / `params.request_state` (`Client.call_tool`
+    does this automatically). Handshake-era clients (`Client(mode="legacy")`, older hosts) still use the back-channel.
+    Check `ctx.session.can_send_request` to choose. In-process `Client(server)` defaults to `mode="auto"` = modern.
+    The low-level `Server` does not sign or validate `request_state`; the firewall binds its own single-use tokens.
   - **Gotcha:** never run Python with the working directory inside the installed `mcp` package folder; its `types` subpackage shadows the stdlib and causes a circular import.
   - When unsure about an API, inspect the installed package (`python -c "import inspect, mcp..."`) or the v2 migration guide; do not guess.
 - **PyYAML** for config, **pytest** for tests.
