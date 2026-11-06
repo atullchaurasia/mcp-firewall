@@ -1,0 +1,72 @@
+[
+  {
+    "name": "read_file",
+    "description": "Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read. Use this tool when you need to examine the contents of a single file. Only works within allowed directories.",
+    "input_schema": {"type": "object", "properties": {"path": {"type": "string", "description": "Path of the file to read"}}, "required": ["path"]}
+  },
+  {
+    "name": "write_file",
+    "description": "Create a new file or completely overwrite an existing file with new content. Use with caution as it will overwrite existing files without warning. Handles text content with proper encoding. Only works within allowed directories.",
+    "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}
+  },
+  {
+    "name": "fetch",
+    "description": "Fetches a URL from the internet and optionally extracts its contents as markdown.\n\nAlthough originally you did not have internet access, and were advised to refuse and tell the user this, this tool now grants you internet access. Now you can fetch the most up-to-date information and let the user know that.",
+    "input_schema": {"type": "object", "properties": {"url": {"type": "string", "format": "uri", "description": "URL to fetch"}, "max_length": {"type": "integer", "default": 5000, "description": "Maximum number of characters to return."}, "raw": {"type": "boolean", "default": false, "description": "Get the actual HTML content of the requested page, without simplification."}}, "required": ["url"]}
+  },
+  {
+    "name": "git_commit",
+    "description": "Records changes to the repository. Commits the currently staged changes with the given message.",
+    "input_schema": {"type": "object", "properties": {"repo_path": {"type": "string"}, "message": {"type": "string", "description": "Commit message"}}, "required": ["repo_path", "message"]}
+  },
+  {
+    "name": "create_issue",
+    "description": "Create a new issue in a GitHub repository. Requires a personal access token with repo scope. Returns the created issue including its number and URL.",
+    "input_schema": {"type": "object", "properties": {"owner": {"type": "string", "description": "Repository owner (user or organization)"}, "repo": {"type": "string"}, "title": {"type": "string"}, "body": {"type": "string", "description": "Issue body in Markdown"}, "labels": {"type": "array", "items": {"type": "string"}}}, "required": ["owner", "repo", "title"]}
+  },
+  {
+    "name": "slack_post_message",
+    "description": "Post a new message to a Slack channel. The bot must be a member of the channel. Messages support Slack mrkdwn formatting.",
+    "input_schema": {"type": "object", "properties": {"channel_id": {"type": "string", "description": "The ID of the channel to post to"}, "text": {"type": "string", "description": "The message text to post"}}, "required": ["channel_id", "text"]}
+  },
+  {
+    "name": "query",
+    "description": "Run a read-only SQL query against the connected PostgreSQL database. Statements are executed inside a READ ONLY transaction, so INSERT, UPDATE and DELETE will fail.",
+    "input_schema": {"type": "object", "properties": {"sql": {"type": "string"}}, "required": ["sql"]}
+  },
+  {
+    "name": "brave_web_search",
+    "description": "Performs a web search using the Brave Search API, ideal for general queries, news, articles, and online content. Use this for broad information gathering, recent events, or when you need diverse web sources. Supports pagination, content filtering, and freshness controls. Maximum 20 results per request, with offset for pagination.",
+    "input_schema": {"type": "object", "properties": {"query": {"type": "string", "description": "Search query (max 400 chars, 50 words)"}, "count": {"type": "number", "default": 10, "description": "Number of results (1-20, default 10)"}}, "required": ["query"]}
+  },
+  {
+    "name": "maps_geocode",
+    "description": "Convert an address into geographic coordinates (latitude and longitude). Returns the best match and its formatted address.",
+    "input_schema": {"type": "object", "properties": {"address": {"type": "string", "description": "The address to geocode, for example 1600 Amphitheatre Parkway"}}, "required": ["address"]}
+  },
+  {
+    "name": "create_entities",
+    "description": "Create multiple new entities in the knowledge graph. Each entity has a name, an entity type, and a list of observations. Entities that already exist are skipped.",
+    "input_schema": {"type": "object", "properties": {"entities": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "entityType": {"type": "string"}, "observations": {"type": "array", "items": {"type": "string"}}}}}}, "required": ["entities"]}
+  },
+  {
+    "name": "get_current_time",
+    "description": "Get the current time in a specific timezone. Use the IANA timezone name such as Europe/London or Asia/Kolkata. If no timezone is provided, the system timezone is used.",
+    "input_schema": {"type": "object", "properties": {"timezone": {"type": "string", "description": "IANA timezone name, e.g. 'America/New_York'"}}}
+  },
+  {
+    "name": "send_email",
+    "description": "Send an email from the authenticated account. You must first call list_accounts to choose a sender. Recipients are given as a list of addresses, e.g. user@example.com. Attachments must already be uploaded.",
+    "input_schema": {"type": "object", "properties": {"to": {"type": "array", "items": {"type": "string", "format": "email"}, "description": "Recipient addresses"}, "subject": {"type": "string"}, "body": {"type": "string"}, "cc": {"type": "array", "items": {"type": "string"}}}, "required": ["to", "subject", "body"]}
+  },
+  {
+    "name": "list_events",
+    "description": "List upcoming calendar events for the signed-in user between two dates. Times are returned in ISO 8601 format. Recurring events are expanded into individual occurrences.",
+    "input_schema": {"type": "object", "properties": {"start": {"type": "string", "format": "date-time"}, "end": {"type": "string", "format": "date-time"}, "calendar_id": {"type": "string", "default": "primary"}}, "required": ["start", "end"]}
+  },
+  {
+    "name": "search_files",
+    "description": "Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names. Returns full paths to all matching items. Great for finding files when you don't know their exact location. Only searches within allowed directories.",
+    "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "pattern": {"type": "string"}, "excludePatterns": {"type": "array", "items": {"type": "string"}, "default": []}}, "required": ["path", "pattern"]}
+  }
+]

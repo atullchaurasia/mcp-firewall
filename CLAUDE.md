@@ -74,7 +74,7 @@ drop-in proxy that requires no change to the agent or the model?
 | `labels.py` | `ToolLabels` dataclass, loading from config, annotation tightening, `UNKNOWN_TOOL` default |
 | `taint.py` | `TaintLedger`: atom extraction, trusted vs tainted atoms, private-data shingles, trusted-field splitting for JSON |
 | `policy.py` | `Action` (ALLOW < ASK < BLOCK), `Decision`, `evaluate()` running all rules, most severe wins |
-| `descriptions.py` | `scan_tool()` heuristics for poisoned metadata, `PinStore` for hash pinning |
+| `descriptions.py` | `scan_tool()` heuristics for poisoned metadata, `PinStore` for hash pinning (in-memory + JSON text; the proxy owns the file; changed pins stay quarantined until reset) |
 | `approver.py` | Human approval backends: MCP elicitation, TTY, auto-deny, auto-approve (benchmark only) |
 | `audit.py` | Append-only JSONL audit log |
 | `config.py` | Load and validate `firewall.yaml` |
@@ -385,7 +385,10 @@ until the previous step's tests pass. Commit after each step.
 - Trusted fields are trusted even when the sender is the attacker: replying to an injected email's `from` passes R1
   (R2 still fires if private data was seen).
 - Private texts shorter than 6 words produce no shingles; only their long numbers are fingerprinted.
-- Scanner is pattern-based and evadable; LLM classifier is planned.
+- Scanner is pattern-based and evadable; LLM classifier is planned. Patterns run on text with hidden characters
+  removed and NFKC-normalised (defeats zero-width splitting and fullwidth letters, not paraphrase).
+  Cross-tool shadowing by name only matches identifier-like names (`send_email`, `mail__x`), not plain words.
+  Known false-positive risk: legitimate tools about `.env` files or SSH keys are quarantined (operator must review).
 - ASK decisions add friction; approval fatigue is a real risk — report ask rate alongside security metrics.
 - Current design keeps one ledger per stdio session; HTTP multi-session support is future work.
 
